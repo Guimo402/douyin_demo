@@ -54,7 +54,10 @@ func Publish(c *gin.Context) {
 		PlayUrl:  "http://39.101.1.113:8080/static/" + finalName,
 		CoverUrl: "https://cdn.pixabay.com/photo/2016/03/27/18/10/bear-1283347_1280.jpg",
 	}
-	db.Create(&new_video)
+	err = db.Create(&new_video).Error
+	if err != nil {
+		panic(err)
+	}
 
 	c.JSON(http.StatusOK, Response{
 		StatusCode: 0,
@@ -75,7 +78,11 @@ func PublishList(c *gin.Context) {
 	var videos []Video
 	var user User
 	db.Find(&user, "id = ?", user_id)
-	db.Find(&videos, "author_id = ?", user_id)
+	err = db.Find(&videos, "author_id = ?", user_id).Error
+	if err != nil {
+		panic(err)
+	}
+	
 	for i := range videos {
 		videos[i].Author = user
 	}

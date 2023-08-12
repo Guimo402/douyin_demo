@@ -23,7 +23,10 @@ func Feed(c *gin.Context) {
 
 	defer db.Close()
 	var videos []Video
-	db.Order("id desc").Limit(3).Find(&videos)
+	err = db.Order("id desc").Limit(3).Find(&videos).Error
+	if err != nil {
+		panic(err)
+	}
 	c.JSON(http.StatusOK, FeedResponse{
 		Response:  Response{StatusCode: 0},
 		VideoList: videos,
