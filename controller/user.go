@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"net/http"
 	"sync/atomic"
@@ -24,12 +23,13 @@ var usersLoginInfo = map[string]User{
 }
 
 func getUsersSum() int {
-	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err := dbinit()
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
-
+	
+	db.AutoMigrate(&User{})
 	var count int
 	err = db.Model(&User{}).Count(&count).Error
 	if err != nil {
@@ -53,11 +53,12 @@ type UserResponse struct {
 }
 
 func Register(c *gin.Context) {
-	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err := dbinit()
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
+
 	username := c.Query("username")
 	password := c.Query("password")
 
@@ -70,6 +71,8 @@ func Register(c *gin.Context) {
 
 	token := username + "#" + password
 
+	db.AutoMigrate(&User{})
+	
 	var f User
 	err = db.Find(&f, "token=?", token).Error
 	if err == nil {
@@ -93,12 +96,12 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
-	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err := dbinit()
 	if err != nil {
 		panic(err)
 	}
-
 	defer db.Close()
+
 	username := c.Query("username")
 	password := c.Query("password")
 
@@ -110,6 +113,8 @@ func Login(c *gin.Context) {
 	}
 
 	token := username + "#" + password
+
+	db.AutoMigrate(&User{})
 
 	var u User
 	err = db.Find(&u, "token=?", token).Error
@@ -128,13 +133,15 @@ func Login(c *gin.Context) {
 }
 
 func UserInfo(c *gin.Context) {
-	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err := dbinit()
 	if err != nil {
 		panic(err)
 	}
-
 	defer db.Close()
+
 	token := c.Query("token")
+
+	db.AutoMigrate(&User{})
 
 	var u User
 	err = db.Find(&u, "token=?", token).Error

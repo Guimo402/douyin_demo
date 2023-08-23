@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"net/http"
 	"time"
@@ -16,14 +15,16 @@ type FeedResponse struct {
 
 // Feed same demo video list for every request
 func Feed(c *gin.Context) {
-	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err := dbinit()
 	if err != nil {
 		panic(err)
 	}
-
 	defer db.Close()
+
+	db.AutoMigrate(&Video{})
+
 	var videos []Video
-	err = db.Order("id desc").Limit(3).Find(&videos).Error
+	err = db.Order("id desc").Limit(30).Find(&videos).Error
 	if err != nil {
 		panic(err)
 	}

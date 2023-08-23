@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	"net/http"
 	"path/filepath"
 )
@@ -16,13 +15,15 @@ type VideoListResponse struct {
 // Publish check token then save upload file to public directory
 func Publish(c *gin.Context) {
 	token := c.PostForm("token")
-
-	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err := dbinit()
 	if err != nil {
 		panic(err)
 	}
-
 	defer db.Close()
+
+	db.AutoMigrate(&User{})
+	db.AutoMigrate(&Video{})
+
 	var user User
 	if err := db.Find(&user, "token = ?", token).Error; err != nil {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
@@ -69,12 +70,12 @@ func Publish(c *gin.Context) {
 func PublishList(c *gin.Context) {
 	user_id := c.Query("user_id")
 
-	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err := dbinit()
 	if err != nil {
 		panic(err)
 	}
-
 	defer db.Close()
+
 	var videos []Video
 	var user User
 	db.Find(&user, "id = ?", user_id)
