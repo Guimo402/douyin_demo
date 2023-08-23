@@ -6,6 +6,8 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"net/http"
 	"sync/atomic"
+	"strings"
+	"fmt"
 )
 
 // usersLoginInfo use map to store user info, and key is username+password for demo
@@ -21,7 +23,23 @@ var usersLoginInfo = map[string]User{
 	},
 }
 
-var userIdSequence = int64(1)
+func getUsersSum() int {
+	db, err := gorm.Open("mysql", "guest:guest123@/new?charset=utf8mb4&parseTime=True&loc=Local")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	var count int
+	err = db.Model(&User{}).Count(&count).Error
+	if err != nil {
+		fmt.Println("exec failed", err)
+	}
+	return count
+}
+
+var userIdSequence = int64(getUsersSum())
+
 
 type UserLoginResponse struct {
 	Response
@@ -43,7 +61,14 @@ func Register(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	token := username + password
+	if strings.Contains(username,"#") {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "Sorry, '#' could not be used in username"},
+		})
+		return
+	}
+
+	token := username + "#" + password
 
 	var f User
 	err = db.Find(&f, "token=?", token).Error
@@ -56,13 +81,13 @@ func Register(c *gin.Context) {
 		newUser := User{
 			Id:    userIdSequence,
 			Name:  username,
-			Token: username + password,
+			Token: token,
 		}
 		db.Create(&newUser)
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 0},
 			UserId:   userIdSequence,
-			Token:    username + password,
+			Token:    token,
 		})
 	}
 }
@@ -77,7 +102,14 @@ func Login(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	token := username + password
+	if strings.Contains(username,"#") {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "Sorry, '#' could not be used in username"},
+		})
+		return
+	}
+
+	token := username + "#" + password
 
 	var u User
 	err = db.Find(&u, "token=?", token).Error
