@@ -5,11 +5,46 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"path/filepath"
+	"bytes"
+	"github.com/disintegration/imaging"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"log"
+	"os"
 )
 
 type VideoListResponse struct {
 	Response
 	VideoList []Video `json:"video_list"`
+}
+
+func GetSnapshot(videoPath, snapshotPath string, frameNum int) (string, error) {
+	buf := bytes.NewBuffer(nil)
+	err := ffmpeg.Input(videoPath).
+		Filter("select", ffmpeg.Args{fmt.Sprintf("gte(n,%d)", frameNum)}).
+		Output("pipe:", ffmpeg.KwArgs{"vframes": 1, "format": "image2", "vcodec": "mjpeg"}).
+		WithOutput(buf, os.Stdout).
+		Run()
+	if err != nil {
+		log.Fatal("generate failed:", err)
+		return "", err
+	}
+	img, err := imaging.Decode(buf)
+	if err != nil {
+		log.Fatal("generate failed:", err)
+		return "", err
+	}
+	
+	coverName := filepath.Base(snapshotPath)
+	coverName = coverName[:len(coverName)-len(filepath.Ext(coverName))]
+	
+	newCoverName := coverName + ".png"
+	
+	err = imaging.Save(img, filepath.Join("./public/", newCoverName))
+	if err != nil {
+		log.Fatal("generate failed:", err)
+		return "", err
+	}
+	return filepath.Join("static/", newCoverName), nil
 }
 
 // Publish check token then save upload file to public directory
@@ -50,11 +85,25 @@ func Publish(c *gin.Context) {
 		return
 	}
 
+	coverPath := filepath.Join("./public/", finalName)
+
+	var cover_path string
+
+	cover_path, err = GetSnapshot(saveFile, coverPath, 1)
+	if err != nil {
+		c.JSON(http.StatusOK, Response{
+			StatusCode: 1,
+			StatusMsg:  err.Error(),
+		})
+		return
+	}
+
 	new_video := Video{
 		AuthorID: user.Id,
 		PlayUrl:  "http://39.101.1.113:8080/static/" + finalName,
-		CoverUrl: "https://cdn.pixabay.com/photo/2016/03/27/18/10/bear-1283347_1280.jpg",
+		CoverUrl: "http://39.101.1.113:8080/" + cover_path,
 	}
+
 	err = db.Create(&new_video).Error
 	if err != nil {
 		panic(err)
