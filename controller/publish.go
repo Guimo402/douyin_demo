@@ -39,12 +39,12 @@ func GetSnapshot(videoPath, snapshotPath string, frameNum int) (string, error) {
 	
 	newCoverName := coverName + ".png"
 	
-	err = imaging.Save(img, filepath.Join("./public/", newCoverName))
+	err = imaging.Save(img, filepath.Join("./public/videos", newCoverName))
 	if err != nil {
 		log.Fatal("generate failed:", err)
 		return "", err
 	}
-	return filepath.Join("static/", newCoverName), nil
+	return filepath.Join("static/images", newCoverName), nil
 }
 
 // Publish check token then save upload file to public directory
